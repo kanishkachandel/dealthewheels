@@ -1,105 +1,111 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>DEALTHEWHEELS | Fair Trip Distribution — Live Demo</title>
-  <link rel="stylesheet" href="studio.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101c2c">
+  <title>DEALTHEWHEELS — Fair dispatch studio</title>
+  <link rel="stylesheet" href="studio.css?v=2">
 </head>
 <body>
-<header>
-  <div>
-    <h1>DEAL<span>THE</span>WHEELS</h1>
-    <p class="tagline">Fair trip distribution across cab vendors — live proof, one click per requirement.</p>
-  </div>
-  <div class="pills">
-    <span class="pill" id="pill-api"><i class="dot"></i> API</span>
-    <span class="pill" id="pill-auth"><i class="dot"></i> Auth</span>
-    <span class="pill" id="pill-trips"><i class="dot"></i> 0 trips allocated</span>
-  </div>
-</header>
-
-<div class="wrap">
-  <!-- ------------------------------------------------ left rail -->
-  <nav class="rail" id="rail">
-    <div class="rail-head">
-      <button class="primary" id="play">▶ Run the whole demo</button>
-      <button class="ghost" id="stop" disabled>Stop</button>
-    </div>
-    <button class="step" data-action="setup">
-      <b>01</b><span><span class="t">Seed 3 vendors · 50 / 30 / 20</span>
-      <small>Per-zone, per-trip-type contract shares</small><span class="tag">RESETS DEMO DATA</span></span>
-    </button>
-    <button class="step" data-action="allocate-one">
-      <b>02</b><span><span class="t">Allocate one trip</span>
-      <small>Shows the shortfall arithmetic behind the pick</small></span>
-    </button>
-    <button class="step" data-action="run-ten">
-      <b>03</b><span><span class="t">Run 10 trips</span>
-      <small>Most-owed-first lands exactly 5 / 3 / 2</small><span class="tag">RESETS DEMO DATA</span></span>
-    </button>
-    <button class="step" data-action="escort-stream">
-      <b>04</b><span><span class="t">Escort trips</span>
-      <small>Guard trips are a second, independent fair stream</small></span>
-    </button>
-    <button class="step" data-action="capacity-guard">
-      <b>05</b><span><span class="t">Capacity guard</span>
-      <small>Zero free cabs → overflow to next-most-owed</small></span>
-    </button>
-    <button class="step" data-action="rejection">
-      <b>06</b><span><span class="t">Rejection &amp; cool-off</span>
-      <small>Re-offer, and never back to the rejecter</small></span>
-    </button>
-    <button class="step" data-action="report">
-      <b>07</b><span><span class="t">Share report</span>
-      <small>Promised % vs actual % vs running shortfall</small></span>
-    </button>
-    <button class="step" data-action="carry-forward">
-      <b>08</b><span><span class="t">Carry-forward across days</span>
-      <small>Starve a vendor on day 1, watch day 2 repay it</small><span class="tag">RESETS DEMO DATA</span></span>
-    </button>
-    <button class="step" data-action="determinism">
-      <b>09</b><span><span class="t">Determinism</span>
-      <small>Same day run twice → identical SHA-256</small><span class="tag">RESETS DEMO DATA</span></span>
-    </button>
-    <button class="step" data-action="race">
-      <b>10</b><span><span class="t">Concurrency race</span>
-      <small>12 threads, 3 cabs — the last slot is won once</small><span class="tag">RESETS DEMO DATA</span></span>
-    </button>
-    <button class="step" data-action="convergence">
-      <b>11</b><span><span class="t">A month at scale</span>
-      <small>~5,000 trips over 30 uneven days, drift measured</small></span>
-    </button>
-  </nav>
-
-  <!-- ------------------------------------------------ stage -->
-  <main class="stage">
-    <section class="panel">
-      <h3>Promised share vs actual share — normal trips</h3>
-      <div class="bars" id="bars">
-        <p class="empty">Press <b>Run the whole demo</b> above, or click step 01 to seed three vendors at
-        50 / 30 / 20. The white marker on each bar is the contracted share; the coloured bar is what the
-        allocator has actually handed out.</p>
+  <header class="topbar">
+    <a class="brand" href="/dashboard/" aria-label="DEALTHEWHEELS home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 36 36" fill="none"><path d="M7 23.5 18 7l11 16.5H7Z" fill="currentColor"/><path d="M12 28h12M18 7v21" stroke="#102134" stroke-width="2.2" stroke-linecap="round"/><circle cx="18" cy="23.5" r="3.2" fill="#102134"/></svg>
+      </span>
+      <span class="brand-copy"><strong>DEALTHEWHEELS</strong><small>FAIR DISPATCH STUDIO</small></span>
+    </a>
+    <div class="topbar-right">
+      <div class="pills" aria-label="System status">
+        <span class="pill" id="pill-api"><i class="dot"></i> API checking</span>
+        <span class="pill" id="pill-auth"><i class="dot"></i> Signing in</span>
+        <span class="pill trips-pill" id="pill-trips"><i class="dot"></i> 0 trips allocated</span>
       </div>
+      <span class="topbar-divider"></span>
+      <a class="docs-link" href="/docs" target="_blank" rel="noreferrer">API docs <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-orbit orbit-one"></div>
+      <div class="hero-orbit orbit-two"></div>
+      <div class="hero-content">
+        <div class="eyebrow"><span class="live-dot"></span> LIVE ALLOCATION WALKTHROUGH</div>
+        <h1 id="hero-title">Fairness you can <span>see.</span></h1>
+        <p>Watch each trip go to the vendor who is owed the most. Eleven short scenarios make the rules—and the proof—easy to follow.</p>
+        <div class="hero-actions">
+          <button class="primary hero-run" id="play"><span class="play-icon" aria-hidden="true">▶</span> Run the whole demo <span class="button-arrow" aria-hidden="true">→</span></button>
+          <button class="ghost" id="stop" disabled>Stop walkthrough</button>
+          <span class="run-note"><span class="keyboard-key">11</span> guided scenarios · about 30 seconds</span>
+        </div>
+      </div>
+      <div class="hero-proof" aria-label="Demo contract shares">
+        <div class="proof-label">THE CONTRACT</div>
+        <div class="proof-total">100<span>%</span><small>allocated fairly</small></div>
+        <div class="share-stack" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="proof-vendors"><span><i class="swatch v1"></i> Vendor One <b>50%</b></span><span><i class="swatch v2"></i> Vendor Two <b>30%</b></span><span><i class="swatch v3"></i> Vendor Three <b>20%</b></span></div>
+        <div class="proof-foot"><span>Normal + escort pools</span><span class="proof-check">✓</span></div>
+      </div>
+      <div class="hero-glow" aria-hidden="true"></div>
     </section>
 
-    <section class="panel" id="result">
-      <p class="empty">Every button here calls the real JWT-protected API and the same
-      <code>FairAllocator</code> used in production — nothing is faked for the demo.</p>
-    </section>
+    <div class="workspace">
+      <aside class="rail-card" aria-label="Guided demo scenarios">
+        <div class="rail-heading">
+          <div><span class="eyebrow light-eyebrow">THE PLAYBOOK</span><h2>Demo steps</h2></div>
+          <span class="step-count" id="progress-count">00 <i>/</i> 11</span>
+        </div>
+        <div class="progress-track" role="progressbar" aria-label="Demo progress" aria-valuemin="0" aria-valuemax="11" aria-valuenow="0"><span id="progress-fill"></span></div>
+        <p class="progress-caption" id="progress-caption">Choose a scenario to begin</p>
+        <nav class="rail" id="rail">
+          <button class="step" data-action="setup"><b>01</b><span><span class="t">Set the contract</span><small>Seed three vendors at 50 / 30 / 20</small><span class="tag">RESETS DEMO DATA</span></span></button>
+          <button class="step" data-action="allocate-one"><b>02</b><span><span class="t">Pick one trip</span><small>See the shortfall math behind the pick</small></span></button>
+          <button class="step" data-action="run-ten"><b>03</b><span><span class="t">Prove the 5 / 3 / 2 split</span><small>Run ten trips, fairly distributed</small><span class="tag">RESETS DEMO DATA</span></span></button>
+          <button class="step" data-action="escort-stream"><b>04</b><span><span class="t">Separate escort trips</span><small>See a second, independent fair stream</small></span></button>
+          <button class="step" data-action="capacity-guard"><b>05</b><span><span class="t">Respect cab capacity</span><small>Skip a full vendor safely</small></span></button>
+          <button class="step" data-action="rejection"><b>06</b><span><span class="t">Handle a rejection</span><small>Re-offer, then cool off the rejecter</small></span></button>
+          <button class="step" data-action="report"><b>07</b><span><span class="t">Read the share report</span><small>Compare promised and actual shares</small></span></button>
+          <button class="step" data-action="carry-forward"><b>08</b><span><span class="t">Carry fairness forward</span><small>Repay yesterday’s shortfall today</small><span class="tag">RESETS DEMO DATA</span></span></button>
+          <button class="step" data-action="determinism"><b>09</b><span><span class="t">Replay the same day</span><small>Verify the matching SHA-256 hashes</small><span class="tag">RESETS DEMO DATA</span></span></button>
+          <button class="step" data-action="race"><b>10</b><span><span class="t">Test a concurrency race</span><small>One last cab slot, one winner</small><span class="tag">RESETS DEMO DATA</span></span></button>
+          <button class="step" data-action="convergence"><b>11</b><span><span class="t">Scale to a month</span><small>Measure fairness across 5,000+ trips</small></span></button>
+        </nav>
+      </aside>
 
-    <section class="panel">
-      <h3>Event log</h3>
-      <div class="log" id="log"></div>
-      <h3>Also worth opening</h3>
-      <p class="links">
-        <a href="/docs" target="_blank">Swagger / OpenAPI</a>
-        <a href="/actuator/health" target="_blank">Health</a>
-        <a href="/actuator/metrics" target="_blank">Prometheus metrics</a>
-        <a href="/dashboard/report.html" target="_blank">Raw report dashboard</a>
-      </p>
-    </section>
+      <div class="stage">
+        <section class="panel allocation-panel" aria-labelledby="allocation-title">
+          <div class="panel-heading">
+            <div><span class="eyebrow">LIVE SCORECARD</span><h2 id="allocation-title">Promised share <span>vs.</span> actual</h2><p>Normal trips · each marker is the vendor’s contract target</p></div>
+            <span class="pool-badge"><i></i> NORMAL POOL</span>
+          </div>
+          <div class="bars" id="bars">
+            <div class="empty-state"><span class="empty-icon">↗</span><div><strong>Your scorecard is ready</strong><p>Run the demo or choose step 01 to seed the three vendors. Their live allocation bars will appear here.</p></div></div>
+          </div>
+          <div class="chart-legend"><span><i class="legend-fill"></i> Actual allocation</span><span><i class="legend-target"></i> Contract target</span><span class="legend-note">Shares update after each scenario</span></div>
+        </section>
+
+        <section class="panel result-panel" id="result" aria-live="polite">
+          <div class="empty-result"><span class="result-spark">✦</span><div><span class="eyebrow">YOUR LIVE PROOF</span><h2>See the decision, not just the result.</h2><p>Every scenario calls the real authenticated API and the same fair allocator used by the application. Pick a step to see the result, the reasoning, and what to say in your walkthrough.</p></div></div>
+        </section>
+
+        <section class="panel activity-panel">
+          <div class="activity-main">
+            <div class="panel-heading compact-heading"><div><span class="eyebrow">LIVE ACTIVITY</span><h2>Event log</h2></div><span class="live-label"><i class="live-dot"></i> CONNECTED</span></div>
+            <div class="log" id="log"><div class="log-empty">Events from your walkthrough will show up here.</div></div>
+          </div>
+          <div class="resources">
+            <span class="eyebrow">EXPLORE THE SYSTEM</span>
+            <a href="/docs" target="_blank" rel="noreferrer"><span class="resource-icon">⌘</span><span><b>Swagger / OpenAPI</b><small>Browse and call API routes</small></span><i>↗</i></a>
+            <a href="/actuator/health" target="_blank" rel="noreferrer"><span class="resource-icon health-icon">♥</span><span><b>Health check</b><small>Service status in JSON</small></span><i>↗</i></a>
+            <a href="/actuator/metrics" target="_blank" rel="noreferrer"><span class="resource-icon metrics-icon">▥</span><span><b>Prometheus metrics</b><small>Live counters and timings</small></span><i>↗</i></a>
+            <a href="/dashboard/report.html" target="_blank" rel="noreferrer"><span class="resource-icon report-icon">▤</span><span><b>Share report</b><small>Open the report dashboard</small></span><i>↗</i></a>
+          </div>
+        </section>
+        <footer class="page-footer"><span>DEALTHEWHEELS <i>·</i> Fair allocation, made visible.</span><span>Built for the interview. Powered by the real API.</span></footer>
+      </div>
+    </div>
   </main>
-</div>
-<script src="studio.js"></script>
+  <script src="studio.js?v=2"></script>
 </body>
 </html>

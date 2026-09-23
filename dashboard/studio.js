@@ -11,6 +11,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 let token = '';
 let playing = false;
 
+function updateProgress() {
+  const completed = document.querySelectorAll('.step.done').length;
+  const progress = document.querySelector('.progress-track');
+  const count = $('progress-count');
+  const fill = $('progress-fill');
+  const caption = $('progress-caption');
+  if (!progress || !count || !fill || !caption) return;
+  count.innerHTML = `${String(completed).padStart(2, '0')} <i>/</i> ${ORDER.length}`;
+  fill.style.width = `${ORDER.length ? completed / ORDER.length * 100 : 0}%`;
+  progress.setAttribute('aria-valuenow', String(completed));
+  const active = document.querySelector('.step.active .t');
+  caption.textContent = active
+    ? `Now showing: ${active.textContent}`
+    : completed === ORDER.length
+      ? 'All scenarios complete — ready to present'
+      : completed
+        ? `${completed} of ${ORDER.length} scenarios complete`
+        : 'Choose a scenario to begin';
+}
+
 /* ---------------------------------------------------------------- plumbing */
 
 function pill(id, text, state) {
@@ -20,6 +40,7 @@ function pill(id, text, state) {
 }
 
 function log(event, detail = '') {
+  document.querySelector('.log-empty')?.remove();
   const stamp = new Date().toLocaleTimeString([], { hour12: false });
   $('log').insertAdjacentHTML('afterbegin',
     `<div><time>${stamp}</time><span class="ev">${esc(event)} <span style="color:var(--muted)">${esc(detail)}</span></span></div>`);
@@ -185,6 +206,7 @@ async function runStep(action) {
   const button = document.querySelector(`.step[data-action="${action}"]`);
   document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
   button.classList.add('active');
+  updateProgress();
   $('result').innerHTML = `<p class="empty">Calling the API…</p>`;
   const [method, path] = endpointFor(action);
   try {
@@ -199,6 +221,7 @@ async function runStep(action) {
         <code>curl -X ${esc(method)} localhost:8000${esc(path)} -H "Authorization: Bearer $TOKEN"</code></div>`;
     bars(body.standings);
     button.classList.add('done');
+    updateProgress();
     log(button.querySelector('.t').textContent, `${ms} ms`);
   } catch (error) {
     $('result').innerHTML = `<p class="headline bad">${esc(error.message)}</p>
@@ -207,6 +230,7 @@ async function runStep(action) {
     throw error;
   } finally {
     button.classList.remove('active');
+    updateProgress();
   }
 }
 
@@ -221,6 +245,7 @@ async function playAll() {
   $('play').disabled = true;
   $('stop').disabled = false;
   document.querySelectorAll('.step').forEach(step => step.classList.remove('done'));
+  updateProgress();
   for (const action of ORDER) {
     if (!playing) break;
     try { await runStep(action); } catch { break; }
@@ -229,6 +254,7 @@ async function playAll() {
   playing = false;
   $('play').disabled = false;
   $('stop').disabled = true;
+  updateProgress();
 }
 
 $('play').onclick = playAll;
@@ -242,6 +268,7 @@ document.addEventListener('keydown', event => {
 });
 
 (async function boot() {
+  updateProgress();
   try {
     const health = await (await fetch('/actuator/health')).json();
     pill('pill-api', `API ${health.status}`, 'ok');
