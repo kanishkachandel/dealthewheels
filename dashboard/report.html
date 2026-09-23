@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DEALTHEWHEELS | Raw Share Report</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">LIVE DISTRIBUTION</p>
+    <h1>Share report</h1>
+    <p class="subhead">Any day, any vendor: promised share against what was actually allocated.</p>
+    <p><a href="/dashboard/">← Back to the guided demo</a></p>
+    <section class="controls">
+      <label>Admin token <input id="token" type="password" placeholder="Paste bearer token"></label>
+      <label>Date <input id="date" type="date"></label>
+      <button id="refresh">Refresh report</button>
+    </section>
+    <p id="message">Get a token from <code>POST /api/auth/login</code> (admin / admin123), paste it, then load the report.</p>
+    <section id="cards" class="cards" aria-live="polite"></section>
+  </main>
+  <script src="dashboard.js"></script>
+</body>
+</html>
