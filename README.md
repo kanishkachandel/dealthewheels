@@ -1,177 +1,185 @@
 # DEALTHEWHEELS
 
-**A local demo of fair trip allocation for a multi-vendor dispatch system.**
+**A fair trip allocation system for coordinating multiple transport vendors.**
 
-DEALTHEWHEELS is a small FastAPI application with a browser dashboard. It accepts trip requests, chooses an eligible vendor using configurable target shares, and records the result in a database. The project also includes guided scenarios so you can see how the allocator behaves when vendors have different shares, reject trips, or reach capacity.
+DEALTHEWHEELS is a Python web application that receives trip requests and assigns each trip to an eligible vendor. Its central goal is to distribute work in line with agreed vendor shares over time, while respecting operational constraints such as cab capacity, active status, and temporary cool-off periods.
 
-> **For local demonstration and development.** The default account and signing key are intentionally easy to use. Do not expose this app to the public internet or use the defaults for a real service.
+The project combines a FastAPI backend, a browser dashboard, a persistent database, reporting endpoints, and an interactive demo that explains the allocation decisions. It is designed as an educational and development project for exploring allocation logic and API-backed workflows.
 
-## What you can do
+## The problem it addresses
 
-- Open the dashboard and create or inspect trips.
-- Allocate trips among vendors according to their target shares.
-- See capacity, vendor eligibility, and allocation outcomes.
-- Try guided scenarios for normal and escort trips, rejection and reallocation, capacity limits, reports, and concurrent requests.
-- Inspect the API interactively through FastAPI's Swagger page.
+When several vendors serve the same area, dispatching every new trip to whichever vendor happens to be first in a list can create an uneven workload. A target-share policy gives each vendor a percentage of the work, but a fair dispatcher must also respond to changing eligibility: a vendor may be full, inactive, or temporarily unavailable after rejecting a trip.
 
-## Run it on Windows
+This project demonstrates a deterministic way to balance those concerns. It tries to move the observed assignments toward each vendor's target share, while never assigning a trip to a vendor who is currently ineligible.
 
-The included `demo.sh` is a Bash script. In VS Code, run it from a **Git Bash** terminal, not PowerShell.
+## Key concepts
 
-1. Open the project folder in VS Code: `D:\kanishkaaaa\kanishkaaaa`.
-2. Open **Terminal → New Terminal**.
-3. Use the terminal profile dropdown and choose **Git Bash**. If Git Bash is not listed, install Git for Windows, then restart VS Code.
-4. In Git Bash, run:
+| Concept | Meaning in this project |
+| --- | --- |
+| **Vendor** | A transport provider that can receive trips and has a cab capacity. |
+| **Zone** | A distance band used to match trips with vendor share configuration. Default zones cover 0–15 km, 15–25 km, and 25 km or more. |
+| **Target share** | The percentage of trips a vendor should receive for a particular zone and trip type. |
+| **Trip type** | `NORMAL` or `ESCORT`. Each type is balanced as its own allocation stream. |
+| **Shortfall** | The difference between the trips a vendor would be expected to receive at its target share and the trips it has actually received. |
+| **Idempotency key** | A client-provided unique request key that makes retries safe from duplicate trip creation. |
+| **Cool-off** | A temporary period during which a vendor that rejected a trip is not eligible for new assignments. |
 
-   ```bash
-   ./demo.sh
-   ```
+## How allocation works
 
-On first run, the script creates a `.venv`, installs the Python packages, starts the API, waits for its health check, and opens the app in your browser. Keep that terminal open while using the app. Press **Ctrl+C** in it to stop the server.
+For each new trip, the allocator:
 
-If your terminal is PowerShell, `./demo.sh` is not the right way to launch a Bash script. Switch the terminal profile to Git Bash first. For a Git Bash terminal that opens in a different folder, move into the project with:
+1. Finds vendors configured for the trip's distance zone and trip type.
+2. Excludes vendors that are inactive, have no spare cab capacity, or are still in cool-off.
+3. Calculates each eligible vendor's shortfall using its target percentage, the number of trips already allocated in that stream, and its actual assignments.
+4. Assigns the trip to the eligible vendor with the largest shortfall. If shortfalls tie, vendor ID breaks the tie, so the same state produces a predictable decision.
+5. Persists the trip and assignment in the database.
 
-```bash
-cd /d/kanishkaaaa/kanishkaaaa
+Normal and escort trips use separate totals. That means escort assignments do not change the balancing calculation for normal trips. Shortfall residue carries over across days so an imbalance is not forgotten at midnight. Eligibility and capacity take precedence over share targets: if a vendor cannot take the trip, the allocator chooses from the vendors that can.
+
+If a request is repeated with the same idempotency key, the existing trip and assignment are returned. If an assigned vendor rejects a trip, the original cab is released, the vendor enters the configured cool-off period, and the trip is assigned again where possible. The rejection is recorded as a trip event.
+
+## What is included
+
+- **Trip allocation API** for submitting trips and receiving assignments.
+- **Vendor and share configuration** to represent capacity and target percentages by zone and trip type.
+- **Dashboard** for viewing the project through a browser.
+- **Rejection and reallocation flow** with vendor cool-off handling.
+- **Share reports** comparing target share, actual share, expected trips, and running shortfall for a date or month.
+- **Guided demo scenarios** for allocations, escort streams, capacity limits, rejection, carry-forward, reporting, determinism, concurrency, and convergence.
+- **Health and metrics endpoints** for basic service monitoring and Prometheus-format metrics.
+- **SQLite local setup** and an optional Docker Compose setup using PostgreSQL and Redis.
+- **Automated tests** covering application behavior.
+
+## Guided demo
+
+The dashboard's demo area walks through real API calls and the same allocation service used by trip requests. It can set up three demo vendors with target shares of 50%, 30%, and 20%, then show how decisions change as trips arrive and vendor conditions change.
+
+Demo trips use a dedicated 900–999 km zone and an `interview-` idempotency-key prefix. The demo reset operation targets its own generated data so ordinary trips are not part of the demo cleanup. The scenarios are useful for seeing the policy in action; they do not replace the API's persistence or allocation behavior with mock results.
+
+## Technology and architecture
+
+- **Backend:** Python, FastAPI, Pydantic, and SQLAlchemy.
+- **Frontend:** static HTML, CSS, and JavaScript served by the application.
+- **Database:** SQLite by default; PostgreSQL can be used through Docker Compose or a configured database URL.
+- **Cache:** optional Redis cache for running totals. The database remains authoritative, and the application can run when Redis is unavailable.
+- **Authentication:** bearer tokens using JWT; administrator-only operations include vendor management, reports, and demo controls.
+- **Observability:** health response at `/actuator/health` and Prometheus metrics at `/actuator/metrics`.
+
+### Request flow
+
+```text
+Browser or API client
+        │
+        ▼
+ FastAPI routes ── authentication and input validation
+        │
+        ├── trip service ── idempotency and zone lookup
+        │                    │
+        │                    ▼
+        │               fair allocator ── eligibility and shortfall ranking
+        │                    │
+        ▼                    ▼
+    reports and demo     SQLAlchemy models
+                             │
+                             ▼
+                    SQLite or PostgreSQL
 ```
 
-The `/d/...` form is Git Bash path syntax; in PowerShell, the equivalent folder is `D:\kanishkaaaa\kanishkaaaa`.
+The source is organized by responsibility: `app/api/` defines routes, `app/services/` contains business operations such as allocation and reporting, `app/models/` defines persisted entities, and `app/schemas/` defines request and response shapes. The dashboard lives in `dashboard/`.
 
-## Run it on macOS or Linux
+## API overview
 
-Open a terminal in the project folder and run:
+Interactive request and response documentation is available at `/docs` when the service is running. Most application routes require a bearer token. Health and metrics are public.
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/api/auth/login` | `POST` | Authenticate and receive an access token |
+| `/api/zones` | `GET` | List configured distance zones |
+| `/api/vendors` | `POST` | Create a vendor and its target shares (administrator) |
+| `/api/trips` | `POST` | Submit a trip for allocation |
+| `/api/trips/{trip_id}/reject` | `POST` | Reject and reallocate an assigned trip |
+| `/api/reports/share` | `GET` | Compare target and actual allocation shares (administrator) |
+| `/api/demo/*` | Various | Set up, run, and inspect guided demo scenarios (administrator) |
+| `/actuator/health` | `GET` | Check service health |
+| `/actuator/metrics` | `GET` | Read Prometheus-format metrics |
+
+Trip requests specify a positive `distance_km`, a `trip_type` (`NORMAL` or `ESCORT`), and an `idempotency_key`. Share reports accept either a date (`YYYY-MM-DD`) or a month (`YYYY-MM`) and can be filtered by zone and trip type.
+
+## Project structure
+
+```text
+app/
+  api/             HTTP routes and authentication dependencies
+  core/            Application settings, security, and shared exceptions
+  db/              Database setup and schema upgrades
+  models/          SQLAlchemy data models
+  schemas/         Validated API request and response models
+  services/        Allocation, trips, reports, caching, and demo scenarios
+dashboard/         Browser dashboard assets
+postman/           Postman collection for exploring the API
+scripts/           Utility scripts, including a load-test client
+tests/             Automated test suite
+demo.sh            Local demo launcher
+Dockerfile         API container definition
+docker-compose.yml API, PostgreSQL, and Redis services
+requirements.txt   Python dependencies
+```
+
+## Quick start
+
+The simplest local setup uses SQLite and does not require Docker or Redis. The launcher creates a Python virtual environment, installs the dependencies, starts the API, and opens the browser.
+
+On Windows, use **Git Bash** in the VS Code terminal:
+
+```bash
+./demo.sh
+```
+
+On macOS or Linux:
 
 ```bash
 chmod +x demo.sh
 ./demo.sh
 ```
 
-Python 3.10 or newer is recommended. The launcher creates a virtual environment and installs `requirements.txt` when needed.
+Open the dashboard at [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/), or explore the API at [http://localhost:8000/docs](http://localhost:8000/docs). Stop the server with **Ctrl+C** in the terminal running the launcher.
 
-## Open the app
+For a container-based setup with PostgreSQL and Redis, use `docker compose up --build`.
 
-When the server is running, use:
+## Local demo account and configuration
 
-| Page | Address | Purpose |
-| --- | --- | --- |
-| Dashboard | [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/) | Main browser interface |
-| API documentation | [http://localhost:8000/docs](http://localhost:8000/docs) | Try API requests with Swagger UI |
-| Health check | [http://localhost:8000/actuator/health](http://localhost:8000/actuator/health) | Check whether the API is responding |
-| Metrics | [http://localhost:8000/actuator/metrics](http://localhost:8000/actuator/metrics) | Prometheus-format application metrics |
-
-The health and metrics pages return data rather than a designed web page. That is expected: they are service endpoints, not dashboard screens.
-
-## Sign in
-
-For a fresh local database, the app creates this development administrator account:
+On a fresh local database, the application creates this development administrator:
 
 | Username | Password |
 | --- | --- |
 | `admin` | `admin123` |
 
-Use it to explore the dashboard's administrator features and demo scenarios. Change or replace the credentials and JWT secret before any non-demo deployment. If you already have a database with an `admin` user, startup does not overwrite that user's password.
+Settings may be supplied in a `.env` file. The standard local defaults are:
 
-## Try the guided demo
-
-Open **Demo** in the dashboard and follow its setup and scenario steps. The scenarios call the application's real API and allocation service; they are not just mock screens. The demo uses its own 900–999 km distance zone and marks its generated trips with an `interview-` idempotency key prefix. Its reset action is intended to clean up those demo trips without deleting unrelated trips.
-
-The allocator tracks each trip type independently. For each incoming trip, it calculates each eligible vendor's shortfall from its target share and selects the vendor with the largest shortfall. A tie is resolved by vendor ID for repeatable results. Vendors must be active, have spare cab capacity, and be outside their cool-off period to be eligible. Repeating a request with the same idempotency key returns the existing assignment instead of creating a duplicate.
-
-When a vendor rejects a trip, the original cab is freed, a cool-off period is applied, and the trip is offered again. Allocation shortfalls carry over between days so the system can correct earlier imbalances over time.
-
-## API overview
-
-The complete request and response schemas are available at `/docs` while the server is running. Most application routes require a bearer token obtained from the login route; health and metrics are public.
-
-| Route | Method | Description |
-| --- | --- | --- |
-| `/api/auth/login` | `POST` | Sign in and obtain an access token |
-| `/api/zones` | `GET` | List trip distance zones (authenticated) |
-| `/api/vendors` | `POST` | Create a vendor (administrator) |
-| `/api/trips` | `POST` | Submit a trip for allocation (authenticated) |
-| `/api/trips/{trip_id}/reject` | `POST` | Reject an assigned trip and reallocate (authenticated) |
-| `/api/reports/share` | `GET` | View allocation share by date or month (administrator) |
-| `/api/demo/*` | Various | Run or inspect the guided demo (administrator) |
-| `/actuator/health` | `GET` | Service health response (public) |
-| `/actuator/metrics` | `GET` | Prometheus-format metrics (public) |
-
-Trip requests include a positive `distance_km`, a `trip_type` (`NORMAL` or `ESCORT`), and an `idempotency_key`. Reports accept either a `date` (`YYYY-MM-DD`) or `month` (`YYYY-MM`), with optional zone and trip-type filters.
-
-## How it is put together
-
-- **API:** Python and FastAPI, starting at `app/main.py`.
-- **Dashboard:** static HTML, CSS, and JavaScript served by the application from `dashboard/`.
-- **Database:** SQLite by default, stored locally as `dealthewheels.db`.
-- **Optional cache:** Redis. The database remains the source of truth; the app continues without Redis.
-- **Containers:** `Dockerfile` and `docker-compose.yml` provide an alternative setup with PostgreSQL and Redis.
-
-Distance zones are seeded for 0–15 km, 15–25 km, and 25 km or more. The application also seeds the initial configuration on startup when needed.
-
-## Optional Docker setup
-
-If Docker Desktop is installed and running, start the API with PostgreSQL and Redis using:
-
-```bash
-docker compose up --build
-```
-
-Then open the dashboard at [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/). Stop the services with **Ctrl+C**, then run `docker compose down` to remove the containers. The Docker Compose JWT secret is a placeholder for local use; replace it before any shared or deployed use.
-
-## Configuration
-
-Settings can be supplied in a `.env` file in the project directory. Defaults are suitable only for a local demo.
-
-| Setting | Default | Description |
+| Setting | Default | Purpose |
 | --- | --- | --- |
 | `APP_NAME` | `DEALTHEWHEELS` | Application title |
-| `DATABASE_URL` | `sqlite:///./dealthewheels.db` | SQLAlchemy database connection URL |
-| `REDIS_URL` | `redis://localhost:6379/0` | Optional Redis connection URL |
-| `JWT_SECRET` | `development-secret-change-me` | Secret used to sign login tokens; replace outside a local demo |
-| `JWT_ALGORITHM` | `HS256` | JWT signing algorithm |
-| `TOKEN_EXPIRY_MINUTES` | `480` | Login token lifetime |
-| `COOLOFF_MINUTES` | `15` | Vendor cool-off after rejecting a trip |
+| `DATABASE_URL` | `sqlite:///./dealthewheels.db` | Database connection |
+| `REDIS_URL` | `redis://localhost:6379/0` | Optional cache connection |
+| `JWT_SECRET` | `development-secret-change-me` | Token signing key |
+| `JWT_ALGORITHM` | `HS256` | Token signing algorithm |
+| `TOKEN_EXPIRY_MINUTES` | `480` | Access-token lifetime |
+| `COOLOFF_MINUTES` | `15` | Vendor cool-off after rejection |
 
-If Redis is not running, the application skips cache operations and continues using the database.
-
-## Project layout
-
-```text
-app/              FastAPI routes, models, allocation services, and database setup
-dashboard/        Browser dashboard assets
-postman/          Postman collection for API exploration
-scripts/          Utility scripts, including a load-test client
-tests/            Automated test suite
-demo.sh           Local one-command launcher
-Dockerfile        API container definition
-docker-compose.yml  Local API, PostgreSQL, and Redis services
-requirements.txt  Python dependencies
-```
+The default credentials and JWT key are for local development only. Replace them before any shared or public deployment; this repository does not claim production readiness.
 
 ## Tests
 
-The repository includes pytest tests. With the project environment installed, run:
+Run the automated test suite from the project environment with:
 
 ```bash
 python -m pytest
 ```
 
-## Troubleshooting
+## Current scope and limitations
 
-**`./demo.sh` returns immediately or does nothing in VS Code**  
-Check the selected terminal profile. It must be **Git Bash** for this script. In PowerShell, choose Git Bash from the terminal profile menu and run the command again.
-
-**The browser does not open automatically**  
-Wait for the terminal to report that the service is healthy, then open [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/) yourself.
-
-**The health check does not respond**  
-Keep the launcher terminal open and look for a Python error during startup. If port 8000 is already in use, stop the other app using it or set a different `PORT` before starting the script.
-
-**Health and metrics show plain text or JSON**  
-That is the expected response format for monitoring endpoints. Use `/dashboard/` for the visual interface.
-
-**A demo action says unauthorized**  
-Sign in with the local administrator account and retry the action.
-
-## License
-
-No license file is currently included. Contact the repository owner before redistributing or reusing this project.
+- This is a demonstration and development application, not a hosted dispatch service.
+- Its built-in administrator credentials and JWT key are development defaults.
+- SQLite is convenient for local use; production concurrency, migrations, secrets, and operational requirements need deployment-specific configuration and review.
+- Redis is optional and is not required for the core trip allocation flow.
+- No license file is currently included. Contact the repository owner before redistributing or reusing the project.
