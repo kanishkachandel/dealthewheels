@@ -38,7 +38,7 @@ app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="das
 
 @app.get("/", include_in_schema=False)
 def root() -> RedirectResponse:
-    """Opening the host lands straight on the guided demo - nothing to remember on demo day."""
+    """Opening the host lands on the vendor dispatch operations dashboard."""
     return RedirectResponse("/dashboard/")
 
 

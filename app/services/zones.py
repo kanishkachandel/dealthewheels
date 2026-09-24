@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.zone import Zone
 
 
-DEFAULT_ZONES: tuple = (("0-15 km", 0, 15), ("15-25 km", 15, 25), ("25+ km", 25, None))
+DEFAULT_ZONES: tuple = (("0–<15 km", 0, 15), ("15–<25 km", 15, 25), ("25+ km", 25, None))
 
 
 def ensure_default_zones(db: Session) -> None:
@@ -16,7 +16,7 @@ def ensure_default_zones(db: Session) -> None:
 
 
 def resolve_zone(db: Session, distance_km: int) -> Zone:
-    query = select(Zone).where(Zone.min_km <= distance_km).where((Zone.max_km.is_(None)) | (Zone.max_km >= distance_km)).order_by(Zone.min_km.desc())
+    query = select(Zone).where(Zone.min_km <= distance_km).where((Zone.max_km.is_(None)) | (Zone.max_km > distance_km)).order_by(Zone.min_km.desc())
     zone = db.scalar(query)
     if not zone:
         raise ValueError(f"No zone configured for {distance_km} km")

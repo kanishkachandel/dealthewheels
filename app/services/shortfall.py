@@ -9,7 +9,7 @@ from app.models.vendor_zone_share import VendorZoneShare
 
 
 def running_totals(db: Session, zone_id: str, trip_type: str, up_to: Optional[datetime] = None) -> Tuple[int, Counter[str]]:
-    query = select(Trip.assigned_vendor_id).where(Trip.zone_id == zone_id, Trip.trip_type == trip_type, Trip.status == "ASSIGNED")
+    query = select(Trip.assigned_vendor_id).where(Trip.zone_id == zone_id, Trip.trip_type == trip_type, Trip.status.in_(("ASSIGNED", "COMPLETED")))
     if up_to:
         query = query.where(Trip.created_at <= up_to)
     ids = [vendor_id for vendor_id in db.scalars(query) if vendor_id]

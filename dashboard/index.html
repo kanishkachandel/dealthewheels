@@ -3,109 +3,74 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101c2c">
-  <title>DEALTHEWHEELS — Fair dispatch studio</title>
-  <link rel="stylesheet" href="studio.css?v=2">
+  <meta name="theme-color" content="#101820">
+  <title>DEALTHEWHEELS — Vendor dispatch</title>
+  <link rel="stylesheet" href="operations.css?v=1">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/dashboard/" aria-label="DEALTHEWHEELS home">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 36 36" fill="none"><path d="M7 23.5 18 7l11 16.5H7Z" fill="currentColor"/><path d="M12 28h12M18 7v21" stroke="#102134" stroke-width="2.2" stroke-linecap="round"/><circle cx="18" cy="23.5" r="3.2" fill="#102134"/></svg>
-      </span>
-      <span class="brand-copy"><strong>DEALTHEWHEELS</strong><small>FAIR DISPATCH STUDIO</small></span>
-    </a>
-    <div class="topbar-right">
-      <div class="pills" aria-label="System status">
-        <span class="pill" id="pill-api"><i class="dot"></i> API checking</span>
-        <span class="pill" id="pill-auth"><i class="dot"></i> Signing in</span>
-        <span class="pill trips-pill" id="pill-trips"><i class="dot"></i> 0 trips allocated</span>
-      </div>
-      <span class="topbar-divider"></span>
-      <a class="docs-link" href="/docs" target="_blank" rel="noreferrer">API docs <span aria-hidden="true">↗</span></a>
-    </div>
+    <a class="brand" href="/dashboard/" aria-label="DEALTHEWHEELS home"><span class="brand-mark">D</span><span><b>DEALTHEWHEELS</b><small>VENDOR DISPATCH</small></span></a>
+    <div class="top-right"><span id="system-status" class="status"><i></i> Checking service</span><a href="/docs" target="_blank" rel="noreferrer">API docs ↗</a><button id="logout" class="link-button hidden">Sign out</button></div>
   </header>
 
-  <main class="page-shell">
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-orbit orbit-one"></div>
-      <div class="hero-orbit orbit-two"></div>
-      <div class="hero-content">
-        <div class="eyebrow"><span class="live-dot"></span> LIVE ALLOCATION WALKTHROUGH</div>
-        <h1 id="hero-title">Fairness you can <span>see.</span></h1>
-        <p>Watch each trip go to the vendor who is owed the most. Eleven short scenarios make the rules—and the proof—easy to follow.</p>
-        <div class="hero-actions">
-          <button class="primary hero-run" id="play"><span class="play-icon" aria-hidden="true">▶</span> Run the whole demo <span class="button-arrow" aria-hidden="true">→</span></button>
-          <button class="ghost" id="stop" disabled>Stop walkthrough</button>
-          <span class="run-note"><span class="keyboard-key">11</span> guided scenarios · about 30 seconds</span>
-        </div>
+  <main id="login-view" class="login-wrap">
+    <section class="login-card">
+      <span class="eyebrow">DISPATCH CONTROL</span><h1>Welcome back.</h1>
+      <p>Sign in to manage vendors, review contract shares, and allocate incoming trips.</p>
+      <form id="login-form" class="form-stack">
+        <label>Username<input name="username" autocomplete="username" value="admin" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" value="admin123" required></label>
+        <button class="button primary" type="submit">Sign in <span>→</span></button>
+        <div id="login-message" class="message" aria-live="polite">Local development account is prefilled.</div>
+      </form>
+      <small class="security-note">Development credentials are prefilled for this local project. Change them before using a shared deployment.</small>
+    </section>
+  </main>
+
+  <main id="app-view" class="shell hidden">
+    <section class="welcome-row"><div><span class="eyebrow">OPERATIONS OVERVIEW</span><h1>Dispatch with confidence.</h1><p>Manage vendor contracts, allocate trips, and see each decision as it happens.</p></div><div class="today-card"><span>Today</span><b id="today-label">—</b><small><i class="pulse"></i> Live allocation service</small></div></section>
+    <nav class="tabs" aria-label="Main navigation"><button class="tab active" data-view="dispatch">Dispatch</button><button class="tab" data-view="vendors">Vendors & shares <span id="vendor-count" class="tab-count">0</span></button><button class="tab" data-view="reports">Share reports</button></nav>
+
+    <section id="view-dispatch" class="view">
+      <div class="stat-grid"><article class="stat-card"><span>Recent trips shown</span><b id="stat-trips">0</b><small>Latest saved assignments</small></article><article class="stat-card"><span>Active vendors</span><b id="stat-vendors">0</b><small>Enabled for dispatch</small></article><article class="stat-card"><span>Contract pools ready</span><b id="stat-pools">0 / 6</b><small>Zone × trip type totals at 100%</small></article><article class="stat-card accent-card"><span>Allocation rule</span><b>Most owed first</b><small>Capacity and availability respected</small></article></div>
+
+      <div class="two-col">
+        <section class="card trip-card"><div class="section-title"><div><span class="eyebrow">NEW REQUEST</span><h2>Allocate a trip</h2></div><span class="icon-badge">↗</span></div>
+          <p class="muted">Enter the trip distance and category. The system finds its zone and assigns an eligible vendor using the configured shares.</p>
+          <form id="trip-form" class="trip-form"><label>Distance <span class="input-unit"><input name="distance_km" type="number" min="1" step="1" placeholder="e.g. 12" required><i>km</i></span></label><label>Trip category<select name="trip_type"><option value="NORMAL">Normal</option><option value="ESCORT">Escort / marshal</option></select></label><button class="button primary" type="submit">Allocate trip <span>→</span></button></form>
+          <div id="trip-message" class="message" aria-live="polite">Configure vendor shares to 100% for the zone and trip category before allocating.</div>
+          <div id="allocation-result" class="allocation-result hidden" aria-live="polite"></div>
+        </section>
+        <section class="card pool-card"><div class="section-title"><div><span class="eyebrow">CONTRACT PERFORMANCE</span><h2>Share vs. actual</h2></div></div>
+          <div class="filter-row"><label>Distance zone<select id="pool-zone"></select></label><label>Trip category<select id="pool-type"><option value="NORMAL">Normal</option><option value="ESCORT">Escort</option></select></label></div>
+          <div id="pool-summary" class="pool-summary"></div><div id="share-chart" class="share-chart"><div class="empty">Add vendors and configure shares to see the live pool.</div></div>
+        </section>
       </div>
-      <div class="hero-proof" aria-label="Demo contract shares">
-        <div class="proof-label">THE CONTRACT</div>
-        <div class="proof-total">100<span>%</span><small>allocated fairly</small></div>
-        <div class="share-stack" aria-hidden="true"><i></i><i></i><i></i></div>
-        <div class="proof-vendors"><span><i class="swatch v1"></i> Vendor One <b>50%</b></span><span><i class="swatch v2"></i> Vendor Two <b>30%</b></span><span><i class="swatch v3"></i> Vendor Three <b>20%</b></span></div>
-        <div class="proof-foot"><span>Normal + escort pools</span><span class="proof-check">✓</span></div>
-      </div>
-      <div class="hero-glow" aria-hidden="true"></div>
+
+      <section class="card ledger-card"><div class="section-title"><div><span class="eyebrow">LATEST ACTIVITY</span><h2>Trip allocation history</h2></div><button id="refresh-trips" class="button secondary">Refresh</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Time</th><th>Trip</th><th>Zone</th><th>Type</th><th>Assigned vendor</th><th>Status</th></tr></thead><tbody id="trip-rows"><tr><td colspan="6" class="empty">No trips have been allocated yet.</td></tr></tbody></table></div>
+      </section>
     </section>
 
-    <div class="workspace">
-      <aside class="rail-card" aria-label="Guided demo scenarios">
-        <div class="rail-heading">
-          <div><span class="eyebrow light-eyebrow">THE PLAYBOOK</span><h2>Demo steps</h2></div>
-          <span class="step-count" id="progress-count">00 <i>/</i> 11</span>
-        </div>
-        <div class="progress-track" role="progressbar" aria-label="Demo progress" aria-valuemin="0" aria-valuemax="11" aria-valuenow="0"><span id="progress-fill"></span></div>
-        <p class="progress-caption" id="progress-caption">Choose a scenario to begin</p>
-        <nav class="rail" id="rail">
-          <button class="step" data-action="setup"><b>01</b><span><span class="t">Set the contract</span><small>Seed three vendors at 50 / 30 / 20</small><span class="tag">RESETS DEMO DATA</span></span></button>
-          <button class="step" data-action="allocate-one"><b>02</b><span><span class="t">Pick one trip</span><small>See the shortfall math behind the pick</small></span></button>
-          <button class="step" data-action="run-ten"><b>03</b><span><span class="t">Prove the 5 / 3 / 2 split</span><small>Run ten trips, fairly distributed</small><span class="tag">RESETS DEMO DATA</span></span></button>
-          <button class="step" data-action="escort-stream"><b>04</b><span><span class="t">Separate escort trips</span><small>See a second, independent fair stream</small></span></button>
-          <button class="step" data-action="capacity-guard"><b>05</b><span><span class="t">Respect cab capacity</span><small>Skip a full vendor safely</small></span></button>
-          <button class="step" data-action="rejection"><b>06</b><span><span class="t">Handle a rejection</span><small>Re-offer, then cool off the rejecter</small></span></button>
-          <button class="step" data-action="report"><b>07</b><span><span class="t">Read the share report</span><small>Compare promised and actual shares</small></span></button>
-          <button class="step" data-action="carry-forward"><b>08</b><span><span class="t">Carry fairness forward</span><small>Repay yesterday’s shortfall today</small><span class="tag">RESETS DEMO DATA</span></span></button>
-          <button class="step" data-action="determinism"><b>09</b><span><span class="t">Replay the same day</span><small>Verify the matching SHA-256 hashes</small><span class="tag">RESETS DEMO DATA</span></span></button>
-          <button class="step" data-action="race"><b>10</b><span><span class="t">Test a concurrency race</span><small>One last cab slot, one winner</small><span class="tag">RESETS DEMO DATA</span></span></button>
-          <button class="step" data-action="convergence"><b>11</b><span><span class="t">Scale to a month</span><small>Measure fairness across 5,000+ trips</small></span></button>
-        </nav>
-      </aside>
+    <section id="view-vendors" class="view hidden">
+      <div class="section-heading"><div><span class="eyebrow">CONTRACT MANAGEMENT</span><h2>Vendors & promised shares</h2><p>Maintain each vendor’s available cabs and target share by distance zone and trip category. Each allocation pool should add up to 100%.</p></div><button id="add-vendor" class="button primary">＋ Add vendor</button></div>
+      <div id="pool-checks" class="pool-check-grid"></div>
+      <div id="vendor-list" class="vendor-grid"><div class="card empty">Loading vendor contracts…</div></div>
+      <div class="note-box"><b>Changing a contract share?</b><span>Shares take effect on future allocations. If a pool is already at 100%, lower one vendor’s share before raising another vendor’s share. Reports use the currently configured targets.</span></div>
+    </section>
 
-      <div class="stage">
-        <section class="panel allocation-panel" aria-labelledby="allocation-title">
-          <div class="panel-heading">
-            <div><span class="eyebrow">LIVE SCORECARD</span><h2 id="allocation-title">Promised share <span>vs.</span> actual</h2><p>Normal trips · each marker is the vendor’s contract target</p></div>
-            <span class="pool-badge"><i></i> NORMAL POOL</span>
-          </div>
-          <div class="bars" id="bars">
-            <div class="empty-state"><span class="empty-icon">↗</span><div><strong>Your scorecard is ready</strong><p>Run the demo or choose step 01 to seed the three vendors. Their live allocation bars will appear here.</p></div></div>
-          </div>
-          <div class="chart-legend"><span><i class="legend-fill"></i> Actual allocation</span><span><i class="legend-target"></i> Contract target</span><span class="legend-note">Shares update after each scenario</span></div>
-        </section>
-
-        <section class="panel result-panel" id="result" aria-live="polite">
-          <div class="empty-result"><span class="result-spark">✦</span><div><span class="eyebrow">YOUR LIVE PROOF</span><h2>See the decision, not just the result.</h2><p>Every scenario calls the real authenticated API and the same fair allocator used by the application. Pick a step to see the result, the reasoning, and what to say in your walkthrough.</p></div></div>
-        </section>
-
-        <section class="panel activity-panel">
-          <div class="activity-main">
-            <div class="panel-heading compact-heading"><div><span class="eyebrow">LIVE ACTIVITY</span><h2>Event log</h2></div><span class="live-label"><i class="live-dot"></i> CONNECTED</span></div>
-            <div class="log" id="log"><div class="log-empty">Events from your walkthrough will show up here.</div></div>
-          </div>
-          <div class="resources">
-            <span class="eyebrow">EXPLORE THE SYSTEM</span>
-            <a href="/docs" target="_blank" rel="noreferrer"><span class="resource-icon">⌘</span><span><b>Swagger / OpenAPI</b><small>Browse and call API routes</small></span><i>↗</i></a>
-            <a href="/actuator/health" target="_blank" rel="noreferrer"><span class="resource-icon health-icon">♥</span><span><b>Health check</b><small>Service status in JSON</small></span><i>↗</i></a>
-            <a href="/actuator/metrics" target="_blank" rel="noreferrer"><span class="resource-icon metrics-icon">▥</span><span><b>Prometheus metrics</b><small>Live counters and timings</small></span><i>↗</i></a>
-            <a href="/dashboard/report.html" target="_blank" rel="noreferrer"><span class="resource-icon report-icon">▤</span><span><b>Share report</b><small>Open the report dashboard</small></span><i>↗</i></a>
-          </div>
-        </section>
-        <footer class="page-footer"><span>DEALTHEWHEELS <i>·</i> Fair allocation, made visible.</span><span>Built for the interview. Powered by the real API.</span></footer>
-      </div>
-    </div>
+    <section id="view-reports" class="view hidden">
+      <div class="section-heading"><div><span class="eyebrow">CONTRACT TRANSPARENCY</span><h2>Share reports</h2><p>Compare promised share with assigned trips over a day or month.</p></div></div>
+      <section class="card report-card"><form id="report-form" class="filter-row report-filters"><label>Period<select name="period"><option value="day">Day</option><option value="month">Month</option></select></label><label>Date or month<input name="date" type="date" required></label><label>Distance zone<select name="zone_id"><option value="">All zones</option></select></label><label>Trip category<select name="trip_type"><option value="">All types</option><option value="NORMAL">Normal</option><option value="ESCORT">Escort</option></select></label><button class="button primary" type="submit">Run report</button></form><div id="report-message" class="message" aria-live="polite"></div><div id="report-results" class="table-wrap"></div></section>
+    </section>
+    <footer class="footer"><span>DEALTHEWHEELS <i>·</i> Fair allocation for real dispatch workflows</span><span>Decisions are saved and traceable.</span></footer>
   </main>
-  <script src="studio.js?v=2"></script>
+
+  <dialog id="vendor-dialog" class="vendor-dialog"><form id="vendor-form" method="dialog"><div class="dialog-heading"><div><span class="eyebrow">VENDOR CONTRACT</span><h2 id="dialog-title">Add vendor</h2><p id="dialog-help">Add the vendor’s operating capacity and its target share in each pool.</p></div><button type="button" id="close-dialog" class="close-button" aria-label="Close">×</button></div>
+    <input type="hidden" name="vendor_id"><div class="form-grid"><label>Vendor name<input name="name" minlength="2" maxlength="120" placeholder="e.g. Northstar Cabs" required></label><label>Available cabs<input name="active_cab_count" type="number" min="0" step="1" value="5" required></label><label id="login-user-field">Vendor login username<input name="username" minlength="3" maxlength="80" placeholder="vendor-northstar" required></label><label id="login-pass-field">Vendor login password<input name="password" type="password" minlength="8" maxlength="72" placeholder="At least 8 characters" required></label><label class="checkbox-label"><input name="active" type="checkbox" checked> Vendor is active</label></div>
+    <h3>Promised share by pool</h3><p class="muted small">Enter a percentage from 0 to 100. A value of 0 means this vendor is not contracted for that pool.</p><div id="share-fields" class="share-fields"></div><div id="vendor-form-message" class="message" aria-live="polite"></div><div class="dialog-actions"><button type="button" id="cancel-vendor" class="button secondary">Cancel</button><button type="submit" class="button primary">Save vendor</button></div>
+  </form></dialog>
+
+  <script src="operations.js?v=1"></script>
 </body>
 </html>

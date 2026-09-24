@@ -1,10 +1,10 @@
 # DEALTHEWHEELS
 
-**A fair trip allocation system for coordinating multiple transport vendors.**
+**A vendor dispatch application for configuring contracts and allocating trips fairly.**
 
-DEALTHEWHEELS is a Python web application that receives trip requests and assigns each trip to an eligible vendor. Its central goal is to distribute work in line with agreed vendor shares over time, while respecting operational constraints such as cab capacity, active status, and temporary cool-off periods.
+DEALTHEWHEELS is a Python web application for operating a multi-vendor cab dispatch workflow. An administrator configures vendors, available cabs, and promised shares for each distance zone and trip category. Dispatchers can then enter trips, see which vendor receives each one, record completion or a vendor rejection, and review how actual assignments compare with contract shares.
 
-The project combines a FastAPI backend, a browser dashboard, a persistent database, reporting endpoints, and an interactive demo that explains the allocation decisions. It is designed as an educational and development project for exploring allocation logic and API-backed workflows.
+The project combines a FastAPI backend, an operations dashboard, a persistent database, and reporting endpoints. An optional guided walkthrough demonstrates the allocation rules, but day-to-day use is organized around vendor contracts and dispatch operations.
 
 ## The problem it addresses
 
@@ -42,8 +42,8 @@ If a request is repeated with the same idempotency key, the existing trip and as
 
 - **Trip allocation API** for submitting trips and receiving assignments.
 - **Vendor and share configuration** to represent capacity and target percentages by zone and trip type.
-- **Dashboard** for viewing the project through a browser.
-- **Rejection and reallocation flow** with vendor cool-off handling.
+- **Operations dashboard** for managing vendor contracts, submitting trips, viewing assignments, and recording trip outcomes.
+- **Trip completion and rejection flows:** completion returns a cab to availability; rejection applies the configured vendor cool-off and reallocates the trip.
 - **Share reports** comparing target share, actual share, expected trips, and running shortfall for a date or month.
 - **Guided demo scenarios** for allocations, escort streams, capacity limits, rejection, carry-forward, reporting, determinism, concurrency, and convergence.
 - **Health and metrics endpoints** for basic service monitoring and Prometheus-format metrics.
@@ -65,7 +65,7 @@ Demo trips use a dedicated 900–999 km zone and an `interview-` idempotency-key
 - **Authentication:** bearer tokens using JWT; administrator-only operations include vendor management, reports, and demo controls.
 - **Observability:** health response at `/actuator/health` and Prometheus metrics at `/actuator/metrics`.
 
-### Request flow
+### Dispatch flow
 
 ```text
 Browser or API client
@@ -95,9 +95,12 @@ Interactive request and response documentation is available at `/docs` when the 
 | --- | --- | --- |
 | `/api/auth/login` | `POST` | Authenticate and receive an access token |
 | `/api/zones` | `GET` | List configured distance zones |
-| `/api/vendors` | `POST` | Create a vendor and its target shares (administrator) |
-| `/api/trips` | `POST` | Submit a trip for allocation |
+| `/api/vendors` | `GET`, `POST` | List or create vendor contracts (administrator) |
+| `/api/vendors/{vendor_id}` | `PUT` | Update a vendor's name, cab availability, status, and shares (administrator) |
+| `/api/trips` | `GET`, `POST` | Review recent assignments or submit a trip |
 | `/api/trips/{trip_id}/reject` | `POST` | Reject and reallocate an assigned trip |
+| `/api/trips/{trip_id}/reject-by-dispatch` | `POST` | Record a vendor rejection from the operations dashboard |
+| `/api/trips/{trip_id}/complete` | `POST` | Complete a trip and return its cab to availability (administrator) |
 | `/api/reports/share` | `GET` | Compare target and actual allocation shares (administrator) |
 | `/api/demo/*` | Various | Set up, run, and inspect guided demo scenarios (administrator) |
 | `/actuator/health` | `GET` | Check service health |
@@ -142,11 +145,11 @@ chmod +x demo.sh
 ./demo.sh
 ```
 
-Open the dashboard at [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/), or explore the API at [http://localhost:8000/docs](http://localhost:8000/docs). Stop the server with **Ctrl+C** in the terminal running the launcher.
+Open the operations dashboard at [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/), sign in, and add vendors with their shares. Each zone and trip-type pool must total 100% before trips can be allocated. Then enter trip distance and category to see the assigned vendor. Mark trips completed to return cabs to availability, or record a vendor rejection to apply cool-off and reallocate. Explore the API at [http://localhost:8000/docs](http://localhost:8000/docs). Stop the server with **Ctrl+C** in the terminal running the launcher.
 
 For a container-based setup with PostgreSQL and Redis, use `docker compose up --build`.
 
-## Local demo account and configuration
+## Local administrator account and configuration
 
 On a fresh local database, the application creates this development administrator:
 
@@ -176,9 +179,9 @@ Run the automated test suite from the project environment with:
 python -m pytest
 ```
 
-## Current scope and limitations
+## Deployment considerations
 
-- This is a demonstration and development application, not a hosted dispatch service.
+- This repository provides a local dispatch operations application; it is not a hosted service or a production deployment package.
 - Its built-in administrator credentials and JWT key are development defaults.
 - SQLite is convenient for local use; production concurrency, migrations, secrets, and operational requirements need deployment-specific configuration and review.
 - Redis is optional and is not required for the core trip allocation flow.

@@ -6,6 +6,9 @@ from pydantic import BaseModel
 class ShareRow(BaseModel):
     vendor_id: str
     vendor_name: str
+    zone_id: str
+    zone_label: str
+    trip_type: str
     target_percent: float
     actual_percent: float
     allocated_trips: int

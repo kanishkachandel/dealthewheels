@@ -5,7 +5,7 @@ from app.models.enums import TripType
 class ShareInput(BaseModel):
     zone_id: str
     trip_type: TripType
-    target_percent: float = Field(gt=0, le=100)
+    target_percent: float = Field(ge=0, le=100)
 
 
 class VendorCreate(BaseModel):
@@ -16,8 +16,26 @@ class VendorCreate(BaseModel):
     shares: list[ShareInput] = Field(min_length=1)
 
 
+class VendorUpdate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    active_cab_count: int = Field(ge=0)
+    active: bool
+    shares: list[ShareInput] = Field(min_length=1)
+
+
+class VendorShareResponse(BaseModel):
+    zone_id: str
+    zone_label: str
+    trip_type: TripType
+    target_percent: float
+
+
 class VendorResponse(BaseModel):
     id: str
     name: str
     active_cab_count: int
     active: bool
+
+
+class VendorDetail(VendorResponse):
+    shares: list[VendorShareResponse]

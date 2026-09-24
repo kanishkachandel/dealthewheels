@@ -8,6 +8,7 @@ class TripType(str, Enum):
 
 class TripStatus(str, Enum):
     ASSIGNED = "ASSIGNED"
+    COMPLETED = "COMPLETED"
     REJECTED = "REJECTED"
 
 

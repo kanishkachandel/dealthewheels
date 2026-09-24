@@ -21,6 +21,11 @@ class TripResponse(BaseModel):
     created_at: datetime
 
 
+class TripHistoryItem(TripResponse):
+    vendor_name: Optional[str]
+    zone_label: str
+
+
 class RejectionResponse(BaseModel):
     trip_id: str
     previous_vendor_id: str
